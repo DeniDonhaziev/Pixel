@@ -6,6 +6,7 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const dataPath = path.join(__dirname, 'data.json')
 const DATA_BLOB_PATH = 'pixel-portfolio-data.json'
+const DATA_KEY = 'portfolio-data'
 
 const defaultData = () => ({
   profile: {
@@ -35,30 +36,59 @@ function normalize(data) {
   return data
 }
 
-function hasBlob() {
+function hasVercelBlob() {
   return Boolean(process.env.BLOB_READ_WRITE_TOKEN)
 }
 
+function isNetlify() {
+  return Boolean(process.env.NETLIFY || process.env.CONTEXT)
+}
+
 async function readLocal() {
-  if (!fs.existsSync(dataPath)) {
-    const data = defaultData()
-    fs.writeFileSync(dataPath, JSON.stringify(data, null, 2), 'utf-8')
-    return data
+  try {
+    if (!fs.existsSync(dataPath)) return defaultData()
+    return normalize(JSON.parse(fs.readFileSync(dataPath, 'utf-8')))
+  } catch {
+    return defaultData()
   }
-  return normalize(JSON.parse(fs.readFileSync(dataPath, 'utf-8')))
 }
 
 function writeLocal(data) {
-  fs.writeFileSync(dataPath, JSON.stringify(data, null, 2), 'utf-8')
+  try {
+    fs.writeFileSync(dataPath, JSON.stringify(data, null, 2), 'utf-8')
+  } catch (err) {
+    console.error('Local write skipped (read-only FS)', err.message)
+  }
 }
 
-async function readBlob() {
+async function getNetlifyStore() {
+  const { getStore } = await import('@netlify/blobs')
+  return getStore('pixel-portfolio')
+}
+
+async function readNetlify() {
+  const store = await getNetlifyStore()
+  const data = await store.get(DATA_KEY, { type: 'json' })
+  if (!data) {
+    const local = await readLocal()
+    await writeNetlify(local)
+    return local
+  }
+  return normalize(data)
+}
+
+async function writeNetlify(data) {
+  const store = await getNetlifyStore()
+  await store.setJSON(DATA_KEY, data)
+}
+
+async function readVercelBlob() {
   const { list } = await import('@vercel/blob')
   const { blobs } = await list({ prefix: DATA_BLOB_PATH })
   const hit = blobs.find((b) => b.pathname === DATA_BLOB_PATH) || blobs[0]
   if (!hit) {
     const data = await readLocal()
-    await writeBlob(data)
+    await writeVercelBlob(data)
     return data
   }
   const res = await fetch(hit.url, { cache: 'no-store' })
@@ -66,7 +96,7 @@ async function readBlob() {
   return normalize(await res.json())
 }
 
-async function writeBlob(data) {
+async function writeVercelBlob(data) {
   const { put } = await import('@vercel/blob')
   await put(DATA_BLOB_PATH, JSON.stringify(data, null, 2), {
     access: 'public',
@@ -77,24 +107,38 @@ async function writeBlob(data) {
 }
 
 export async function readData() {
-  if (hasBlob()) {
+  if (hasVercelBlob()) {
     try {
-      return await readBlob()
+      return await readVercelBlob()
     } catch (err) {
-      console.error('Blob read failed, fallback local', err)
-      return readLocal()
+      console.error('Vercel Blob read failed', err)
+    }
+  }
+  if (isNetlify()) {
+    try {
+      return await readNetlify()
+    } catch (err) {
+      console.error('Netlify Blobs read failed', err)
     }
   }
   return readLocal()
 }
 
 export async function writeData(data) {
-  if (hasBlob()) {
+  if (hasVercelBlob()) {
     try {
-      await writeBlob(data)
+      await writeVercelBlob(data)
       return
     } catch (err) {
-      console.error('Blob write failed, fallback local', err)
+      console.error('Vercel Blob write failed', err)
+    }
+  }
+  if (isNetlify()) {
+    try {
+      await writeNetlify(data)
+      return
+    } catch (err) {
+      console.error('Netlify Blobs write failed', err)
     }
   }
   writeLocal(data)
@@ -103,14 +147,28 @@ export async function writeData(data) {
 export async function saveUpload(file) {
   const safe = String(file.originalname || 'file').replace(/[^a-zA-Z0-9._-]/g, '_')
   const filename = `${Date.now()}-${safe}`
+  const contentType = file.mimetype || 'application/octet-stream'
 
-  if (hasBlob()) {
+  if (hasVercelBlob()) {
     const { put } = await import('@vercel/blob')
     const blob = await put(`uploads/${filename}`, file.buffer, {
       access: 'public',
-      contentType: file.mimetype || 'application/octet-stream',
+      contentType,
     })
     return { url: blob.url, filename }
+  }
+
+  if (isNetlify()) {
+    const store = await getNetlifyStore()
+    const key = `uploads/${filename}`
+    await store.set(key, file.buffer, { metadata: { contentType } })
+    // Public URL via Netlify Blobs serve endpoint is site-specific;
+    // expose through our API proxy path
+    const site = process.env.URL || process.env.DEPLOY_PRIME_URL || ''
+    return {
+      url: `${site}/.netlify/functions/media?key=${encodeURIComponent(key)}`,
+      filename,
+    }
   }
 
   const root = path.join(__dirname, '..')
@@ -118,6 +176,21 @@ export async function saveUpload(file) {
   if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true })
   fs.writeFileSync(path.join(uploadsDir, filename), file.buffer)
   return { url: `/uploads/${filename}`, filename }
+}
+
+export async function readUpload(key) {
+  if (!key || key.includes('..')) return null
+  if (isNetlify()) {
+    const store = await getNetlifyStore()
+    const buf = await store.get(key, { type: 'arrayBuffer' })
+    const meta = await store.getMetadata(key)
+    if (!buf) return null
+    return {
+      buffer: Buffer.from(buf),
+      contentType: meta?.metadata?.contentType || 'application/octet-stream',
+    }
+  }
+  return null
 }
 
 export function ensureCategory(data, category) {

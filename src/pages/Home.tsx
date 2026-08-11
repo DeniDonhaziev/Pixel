@@ -127,7 +127,9 @@ export default function Home() {
   useEffect(() => {
     fetchPortfolio()
       .then(setData)
-      .catch(() => setError('Не удалось загрузить портфолио. Запусти сервер: npm run dev'))
+      .catch(() =>
+        setError('Не удалось загрузить данные. Если сайт на Netlify/Vercel — подожди редеплой или открой /api/portfolio'),
+      )
   }, [])
 
   const categories = useMemo(() => {

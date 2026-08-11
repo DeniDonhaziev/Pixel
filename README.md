@@ -2,6 +2,8 @@
 
 Сайт-портфолио (монтаж / Reels / сайты / карточки WB) + админка.
 
+Репозиторий: https://github.com/DeniDonhaziev/Pixel
+
 ## Локально
 
 ```bash
@@ -9,39 +11,40 @@ npm install
 npm run dev
 ```
 
-- Сайт: http://localhost:5173  
-- Админка: http://localhost:5173/admin  
-- Пароль по умолчанию: `cut2026`
+- Сайт: http://localhost:5173
+- Админка: http://localhost:5173/admin
+- Пароль: `cut2026` (или `ADMIN_PASSWORD`)
 
-## Деплой на Vercel (красивая ссылка)
+## Деплой на Netlify (рекомендуется)
 
-Репозиторий: https://github.com/DeniDonhaziev/Pixel
+1. [app.netlify.com](https://app.netlify.com) → **Add new site** → **Import from Git** → `DeniDonhaziev/Pixel`
+2. Build settings подхватятся из `netlify.toml`:
+   - Build: `npm run build`
+   - Publish: `dist`
+   - Functions: `netlify/functions`
+3. Site name: **`pixel`** → ссылка `https://pixel.netlify.app`
+4. Site settings → Environment variables:
+   - `ADMIN_PASSWORD` = свой пароль
+5. Deploy
 
-1. Зайди на [vercel.com](https://vercel.com) → **Add New Project** → импортируй `DeniDonhaziev/Pixel`
-2. Framework: **Vite** (подхватится из `vercel.json`)
-3. Environment Variables:
-   - `ADMIN_PASSWORD` — свой пароль админки
-   - `BLOB_READ_WRITE_TOKEN` — создай в Vercel: **Storage → Blob → Create** и скопируй токен  
-     (без Blob загрузки с админки на проде не сохранятся)
-4. Deploy
+Проверка API: открой `https://твой-сайт.netlify.app/api/portfolio` — должен быть JSON.
 
-Ссылка будет вида:
+## Деплой на Vercel
 
-- `https://pixel.vercel.app` — если имя `pixel` свободно  
-- или `https://pixel-<твой-ник>.vercel.app`
+1. Import `DeniDonhaziev/Pixel` на [vercel.com](https://vercel.com)
+2. Project name: `pixel`
+3. Env:
+   - `ADMIN_PASSWORD`
+   - `BLOB_READ_WRITE_TOKEN` (Vercel Storage → Blob)
 
-Потом в Vercel → **Domains** можно повесить свой домен, например `pixel.doni.ru`.
+## Важно про большие видео
 
-### Важно про видео на Vercel
-
-На Hobby у serverless лимит тела запроса ~4.5 МБ. Для больших роликов:
-- заливай на YouTube / Instagram и кидай **ссылку**, или  
-- используй вкладку **Сайты** (только URL), или  
-- проверь лимиты Blob / Pro план
+На бесплатном serverless лимит тела запроса небольшой. Для тяжёлых роликов лучше ссылка (YouTube/Instagram) или вкладка «Сайты».
 
 ## Структура
 
-- `src/` — фронт (React + Vite)
-- `server/` — API (Express)
-- `api/` — вход для Vercel Serverless
-- `uploads/` — локальные файлы (в git не попадают)
+- `src/` — фронт
+- `server/` — Express API
+- `netlify/functions/` — Netlify Functions
+- `api/` — Vercel Serverless
+- `uploads/` — только локально (в git не попадает)

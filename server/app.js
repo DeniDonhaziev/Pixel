@@ -11,7 +11,13 @@ const __dirname = path.dirname(__filename)
 const root = path.join(__dirname, '..')
 const uploadsDir = path.join(root, 'uploads')
 
-if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true })
+if (!process.env.VERCEL && !process.env.NETLIFY) {
+  try {
+    if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true })
+  } catch {
+    // ignore
+  }
+}
 
 export const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'cut2026'
 
