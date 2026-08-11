@@ -6,12 +6,16 @@ import {
   deleteProject,
   fetchPortfolio,
   getToken,
+  importLocalSeed,
   login,
+  logout as apiLogout,
   setToken,
   updateCategories,
   updateProfile,
   updateSoftware,
+  watchAuth,
 } from '../api'
+import { isFirebaseEnabled } from '../firebase'
 import type { Accent, PortfolioData, Profile, SoftwareItem } from '../types'
 import { isSiteCategory, getCoverKind } from '../types'
 
@@ -24,6 +28,9 @@ export default function Admin() {
 
   const [authed, setAuthed] = useState(Boolean(getToken()))
   const [password, setPassword] = useState('')
+  const [email, setEmail] = useState(
+    (import.meta.env.VITE_FIREBASE_ADMIN_EMAIL as string | undefined) || '',
+  )
   const [data, setData] = useState<PortfolioData | null>(null)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
@@ -79,6 +86,16 @@ export default function Admin() {
   }
 
   useEffect(() => {
+    return watchAuth((user) => {
+      if (isFirebaseEnabled()) {
+        setAuthed(Boolean(user))
+        if (user) setToken('firebase')
+        else clearToken()
+      }
+    })
+  }, [])
+
+  useEffect(() => {
     if (!authed) return
     load().catch((e) => setError(e.message))
   }, [authed])
@@ -100,7 +117,7 @@ export default function Admin() {
     e.preventDefault()
     setError('')
     try {
-      const res = await login(password)
+      const res = await login(password, email)
       setToken(res.token)
       setAuthed(true)
     } catch (err) {
@@ -108,9 +125,26 @@ export default function Admin() {
     }
   }
 
-  function logout() {
-    clearToken()
+  async function logout() {
+    await apiLogout()
     setAuthed(false)
+  }
+
+  async function seedFromLocal() {
+    setBusy(true)
+    setError('')
+    try {
+      const res = await fetch('/seed-data.json')
+      if (!res.ok) throw new Error('Нет seed-data.json в public/')
+      const json = await res.json()
+      await importLocalSeed(json)
+      setMessage('Данные залиты в Firebase')
+      await load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка импорта')
+    } finally {
+      setBusy(false)
+    }
   }
 
   async function saveProfile(e: FormEvent) {
@@ -268,9 +302,27 @@ export default function Admin() {
     return (
       <div className="login-wrap">
         <form className="login-box" onSubmit={handleLogin}>
-          <h1>CUT. Admin</h1>
-          <p className="admin__sub">Только ты можешь закидывать видео. Пароль: cut2026</p>
+          <h1>PIXEL Admin</h1>
+          <p className="admin__sub">
+            {isFirebaseEnabled()
+              ? 'Вход через Firebase. Данные и видео хранятся в облаке 24/7.'
+              : 'Локальный режим. Пароль по умолчанию: cut2026'}
+          </p>
           <div className="form-grid">
+            {isFirebaseEnabled() ? (
+              <div className="field">
+                <label htmlFor="email">Email</label>
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="username"
+                  required
+                  placeholder="admin@gmail.com"
+                />
+              </div>
+            ) : null}
             <div className="field">
               <label htmlFor="password">Пароль</label>
               <input
@@ -302,10 +354,17 @@ export default function Admin() {
             <div>
               <h1>Админ-панель</h1>
               <p className="admin__sub">
-                Выбери вкладку (Reels, Клип и т.д.) — видео попадёт именно туда.
+                {isFirebaseEnabled()
+                  ? 'Firebase: файлы и данные не пропадут, сервер онлайн 24/7.'
+                  : 'Выбери вкладку — работа попадёт именно туда.'}
               </p>
             </div>
             <div className="admin-actions">
+              {isFirebaseEnabled() ? (
+                <button className="btn btn--ghost" type="button" onClick={seedFromLocal} disabled={busy}>
+                  Импорт seed
+                </button>
+              ) : null}
               <Link
                 className="btn btn--ghost"
                 to={category ? `/?tab=${encodeURIComponent(category)}#works` : '/'}

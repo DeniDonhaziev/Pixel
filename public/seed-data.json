@@ -1,0 +1,74 @@
+{
+  "profile": {
+    "brand": "CUT.",
+    "name": "Дени",
+    "role": "Video Editor / Creator",
+    "tagline": "Монтаж, который держит внимание до последней секунды",
+    "bio": "Рекламные ролики, клипы, Reels и цветкор. Чёткая подача, ритм и визуал под бренд.",
+    "email": "",
+    "telegram": "@egoinsta",
+    "whatsapp": "+7 929 894 3137",
+    "instagram": "@elitegrindonly"
+  },
+  "software": [
+    {
+      "id": "code",
+      "name": "Программирование",
+      "short": "</>",
+      "url": "https://code.visualstudio.com/",
+      "color": "#007ACC"
+    },
+    {
+      "id": "figma",
+      "name": "Figma",
+      "short": "Fg",
+      "url": "https://www.figma.com/",
+      "color": "#F24E1E"
+    },
+    {
+      "id": "capcut",
+      "name": "CapCut",
+      "short": "Cc",
+      "url": "https://www.capcut.com/",
+      "color": "#00F2EA"
+    }
+  ],
+  "categories": [
+    "Reels",
+    "Сайты",
+    "Карточки товаров для WB"
+  ],
+  "projects": [
+    {
+      "id": "p-1786380686325",
+      "title": "LevelUP",
+      "description": "Трекер привычек ",
+      "category": "Сайты",
+      "tools": [
+        "ReactNative"
+      ],
+      "year": "2026",
+      "link": "https://leveluptracker.web.app/",
+      "accent": "lime",
+      "mediaType": "site",
+      "mediaUrl": "",
+      "createdAt": "2026-08-10T16:51:26.325Z"
+    },
+    {
+      "id": "p-1786379893477",
+      "title": "чрмов",
+      "description": "ылволыв",
+      "category": "Reels",
+      "tools": [
+        "CapCut",
+        "Figma"
+      ],
+      "year": "2026",
+      "link": "",
+      "accent": "lime",
+      "mediaType": "video",
+      "mediaUrl": "/uploads/1786379893383-IMG_4288.MOV",
+      "createdAt": "2026-08-10T16:38:13.478Z"
+    }
+  ]
+}

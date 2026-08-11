@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { fetchPortfolio } from '../api'
 import { ThemedCover } from '../components/ThemedCover'
+import { isFirebaseEnabled } from '../firebase'
 import type { PortfolioData, Profile, Project } from '../types'
 import {
   getCoverKind,
@@ -128,7 +129,11 @@ export default function Home() {
     fetchPortfolio()
       .then(setData)
       .catch(() =>
-        setError('Не удалось загрузить данные. Если сайт на Netlify/Vercel — подожди редеплой или открой /api/portfolio'),
+        setError(
+          isFirebaseEnabled()
+            ? 'Не удалось загрузить данные из Firebase. Проверь .env.local и правила Firestore.'
+            : 'Не удалось загрузить портфолио. Запусти npm run dev или подключи Firebase.',
+        ),
       )
   }, [])
 
